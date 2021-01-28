@@ -1,0 +1,68 @@
+# data
+dataset: maze
+test_size: 0.2
+weighted: False
+
+# env
+max_episode_steps: 500
+reward_type: path_length  # path_length | er_diff | sign_er_diff
+node_history: 2
+cat_features: Y  # any comb. of {Y, S, N, B, D, P, X}
+feature_range: [-0.5, 0.5]
+meas_transform: minmax   # normal | lognormal | minmax | data_minmax | identity
+target_transform: normal  # normal | lognormal | identity | minmax
+n_past_offsets: 8
+
+# training loop
+init_eval: True
+n_train_steps: 25_600  # 800_000  # 20000 with epsilon_end=0.45
+n_test_episodes: 50
+train_freq: 32         # env steps
+test_freq: 512         # 7812   # grad steps
+log_freq: 100          # grad steps
+n_eval_artifacts: 0    # save this many episode artifacts at every evaluation (epoch)
+save_model: False
+
+# DFP / Q-learning
+replay_capacity: 20_000
+min_horizon: 4
+epsilon_start: 1.0
+epsilon_end: 0.15
+exploration_frac: 1.0
+use_past_meas: False
+use_curr_meas: True
+input_meas_type: R  # (R: 'exp_rate', N: 'node_discovery', E: 'edge_discovery', S: 'sparsity', 'L': 'edge_discovery2')
+output_meas_type: R  # (R: 'exp_rate', N: 'node_discovery', E: 'edge_discovery', 'L': 'path_length_over_time_diff')
+future_steps: [1, 2, 4, 8, 16, 32, 64, 128]
+temporal_coeffs: [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 1.0]
+meas_coeffs: [1]
+sample_goals: False     # goal sampling hurts
+goal_space: pos  # pos_neg | pos |  m: mask out K future horizons, u: uniformly sample for all horizons
+
+# optimization
+batch_size: 32
+lr: 0.0001
+loss: mse  # mse | ordinal
+use_scheduler: False
+scheduler_step_freq: 0.3125
+scheduler_decay: 0.3
+train_after_episode: False
+
+# other
+device: cpu
+seed: 1
+data_seed: 1
+
+# model
+model:
+    dim_hidden: 64   # 128
+    nonlinearity: relu  # lrelu
+    alpha: 0.2
+    dropout: 0
+    num_gnn_layers: 2
+    num_meas_layers: 2
+    num_joint_layers: 2
+    use_current: True
+    visited_agg: True  # False | True
+    use_context: False
+    context_factor: 1  # 1 | 2
