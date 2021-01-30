@@ -3,10 +3,10 @@ import networkx as nx
 from sacred import Experiment
 from pathlib import Path
 
-from xlog.paths import DATA_DIR
-from xlog.utils import save_pickle
 from noge.constants import SYNTHETIC_DATASETS
-from noge.envs.maze_graph_env import make_maze, maze_to_graph
+from noge.constants import DATA_DIR
+from noge.envs import make_maze, maze_to_graph
+from xlog.utils import save_pickle
 
 
 def make_data(name, n_graphs, print_every=50):
@@ -102,11 +102,14 @@ def cfg():
 @ex.automain
 def main(name, n_graphs, print_every, data_dir, _log):
 
-    _log.info(f"Generating {name} graphs...")
-    data = make_data(name, n_graphs, print_every=print_every)
-    _log.info(f"{len(data):5} graphs generated. Now storing...")
+    _log.info(f"Making paths...")
     data_dir = Path(data_dir)
     data_dir.mkdir(exist_ok=True)
     path = data_dir / f"{name}.pkl"
+
+    _log.info(f"Generating {name} graphs...")
+    data = make_data(name, n_graphs, print_every=print_every)
+
+    _log.info(f"{len(data):5} graphs generated. Now storing...")
     save_pickle(data, path)
     _log.info(f"Data stored.")

@@ -4,26 +4,26 @@ import networkx as nx
 import osmnx as ox
 
 from noge.constants import PLACES
-from xlog.paths import DATA_DIR
+from noge.constants import DATA_DIR
 from xlog.utils import save_pickle, load_pickle, Timer
-
 
 RAW_DIR = DATA_DIR / 'osm' / 'raw'
 PROC_DIR = DATA_DIR / 'osm' / 'processed'
 
-
 ex = sacred.Experiment('Real Network Figure')
-ex.add_config(dict(
-    dpi=300,
-    output_dir=None,
-    show=1,
-    place_key='SFO',
-    edge_width=1,
-    W=12,
-    H=12,
-    split=False,
-    alpha=0.5
-))
+
+
+@ex.config
+def cfg():
+    dpi = 300
+    output_dir = None
+    show = 1
+    place_key = 'SFO'
+    edge_width = 1
+    W = 12
+    H = 12
+    split = False
+    alpha = 0.5
 
 
 def get_name_from_place(place):
@@ -31,20 +31,19 @@ def get_name_from_place(place):
 
 
 def split_graph(G, name, xmin, xmax, ymin, ymax, W, H, dpi=300, output_dir=None, show=True, alpha=1.0):
-    
     # separating line: y = a * x + b
     dx = xmax - xmin
     dy = ymax - ymin
     a = dy / dx
     b = ymax - a * xmax
-    
+
     pos = {v: (G._node[v]['x'], G._node[v]['y']) for v in G._node}
-    
+
     # subgraph G1
-    nodes1 = {v for v in G._node if pos[v][1] > a*pos[v][0] + b}
+    nodes1 = {v for v in G._node if pos[v][1] > a * pos[v][0] + b}
     edges1 = [(u, v, {'weight': G[u][v][0]['length']}) for u, v in G.edges() if u in nodes1 and v in nodes1]
     G1 = nx.from_edgelist(edges1)
-    
+
     # subgraph G2
     nodes2 = {v for v in G._node if v not in nodes1}
     edges2 = [(u, v, {'weight': G[u][v][0]['length']}) for u, v in G.edges() if u in nodes2 and v in nodes2]
@@ -63,18 +62,18 @@ def split_graph(G, name, xmin, xmax, ymin, ymax, W, H, dpi=300, output_dir=None,
 
     # color nodes for figure
     nc = ['red' if v in nodes1 else 'blue' for v in G]
-    
+
     fig, ax = plt.subplots(figsize=(W, H))
     nx.draw_networkx_nodes(G, pos=pos, node_color=nc, node_size=1, ax=ax, alpha=alpha)
     nx.draw_networkx_edges(G, pos=pos, edge_color='gray', width=1, ax=ax)
     plt.plot([xmin, xmax], [ymin, ymax], 'go--')
-    
+
     # save splitting figure
     if output_dir is not None:
         fig_path = output_dir / f"{name}_split.png"
         print(f"Saving figure in {fig_path}")
         fig.savefig(fig_path, dpi=dpi)
-    
+
     if show:
         plt.show()
 
@@ -101,7 +100,7 @@ def get_graph(place_key, output_dir, edge_width, dpi, show, W, H, split, alpha):
 
         # save "raw" downloaded data
         save_pickle(G, path_raw)
-    
+
     # load or filter processed graph
     path_proc = PROC_DIR / f"{name}.pkl"
     if path_proc.exists():
@@ -113,14 +112,15 @@ def get_graph(place_key, output_dir, edge_width, dpi, show, W, H, split, alpha):
         G2.remove_edges_from(sle)
         save_pickle(G2, path_proc)
 
-    # show figure (and save)
-    if output_dir:
-        ox.settings.imgs_folder = output_dir
-
-    fig, ax = ox.plot_graph(G2, fig_height=H, fig_width=W, node_size=0,
-                            edge_linewidth=edge_width, edge_color='gray',
-                            show=show, dpi=dpi,
-                            filename=name, save=output_dir is not None)
+    fig, ax = ox.plot_graph(G2,
+                            figsize=(W, H),
+                            node_size=0,
+                            edge_linewidth=edge_width,
+                            edge_color='gray',
+                            show=show,
+                            dpi=dpi,
+                            filepath=name,
+                            save=output_dir is not None)
 
     # area = ox.gdf_from_place(place)
     # nodes, edges = ox.graph_to_gdfs(G)

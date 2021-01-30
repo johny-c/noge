@@ -1,7 +1,6 @@
 # data
 dataset: maze
 test_size: 0.2
-weighted: False
 
 # env
 max_episode_steps: 500
@@ -11,7 +10,6 @@ cat_features: Y  # any combination of {Y, S, N, B, D}
 feature_range: [-0.5, 0.5]
 meas_transform: minmax   # normal | lognormal | minmax | theory_minmax | identity
 target_transform: normal  # normal | lognormal | identity | minmax
-n_past_offsets: 8
 
 # training loop
 init_eval: True
@@ -29,8 +27,6 @@ min_horizon: 4
 epsilon_start: 1.0
 epsilon_end: 0.15
 exploration_frac: 1.0
-use_past_meas: False
-use_curr_meas: True
 input_meas_type: R
 output_meas_type: R
 gamma: 0.99
@@ -59,7 +55,5 @@ model:
     num_gnn_layers: 2
     num_meas_layers: 2
     num_joint_layers: 2
-    use_current: True
-    visited_agg: True  # False | True
-    use_context: False
-    context_factor: 1  # 1 | 2
+    use_goal: False
+    output_activation: null

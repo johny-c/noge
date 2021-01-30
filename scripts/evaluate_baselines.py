@@ -7,8 +7,8 @@ from noge.evaluation import save_eval_results, eval_ing, evaluate_policy
 from noge.envs import BaseGraphEnv
 from noge.constants import REAL_DATASETS, SYNTHETIC_DATASETS
 from noge.constants import BASELINES as POLICIES
+from noge.constants import EVAL_DIR
 from xlog.utils import get_logger
-from xlog.paths import EVAL_DIR
 from xlog.mlflow_observer import MlflowObserver
 
 
