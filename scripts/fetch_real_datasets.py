@@ -1,3 +1,4 @@
+import time
 import sacred
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -5,7 +6,7 @@ import osmnx as ox
 
 from noge.constants import PLACES
 from noge.constants import DATA_DIR
-from xlog.utils import save_pickle, load_pickle, Timer
+from xlog.utils import save_pickle, load_pickle
 
 RAW_DIR = DATA_DIR / 'osm' / 'raw'
 PROC_DIR = DATA_DIR / 'osm' / 'processed'
@@ -17,7 +18,7 @@ ex = sacred.Experiment('Real Network Figure')
 def cfg():
     dpi = 300
     output_dir = None
-    show = 1
+    show = 0
     dataset = 'SFO'
     edge_width = 1
     W = 12
@@ -85,8 +86,8 @@ def get_graph(dataset, output_dir, edge_width, dpi, show, W, H, split, alpha):
     name = get_name_from_place(place)
 
     # load or download raw graph
-    RAW_DIR.mkdir(exist_ok=True)
-    PROC_DIR.mkdir(exist_ok=True)
+    RAW_DIR.mkdir(exist_ok=True, parents=True)
+    PROC_DIR.mkdir(exist_ok=True, parents=True)
     path_raw = RAW_DIR / f"{name}.pkl"
     if path_raw.exists():
         # load downloaded graph
@@ -94,9 +95,10 @@ def get_graph(dataset, output_dir, edge_width, dpi, show, W, H, split, alpha):
     else:
         # download
         print(f"Downloading data for {place['city']}...")
-        with Timer() as timer:
-            G = ox.graph_from_place(place, network_type='drive')
-            print(f"Done in {timer.get():.2f}s.")
+        tic = time.time()
+        G = ox.graph_from_place(place, network_type='drive')
+        toc = time.time()
+        print(f"Done in {toc-tic:.2f}s.")
 
         # save "raw" downloaded data
         save_pickle(G, path_raw)

@@ -133,3 +133,5 @@ dmypy.json
 
 # run artifacts
 mlruns/
+cache/
+data/

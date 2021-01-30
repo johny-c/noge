@@ -14,7 +14,7 @@ from xlog.mlflow_observer import MlflowObserver
 
 ex = Experiment(name='NOGE_BASELINE', ingredients=[eval_ing])
 ex.observers = [MlflowObserver(tracking_uri=str(EVAL_DIR))]
-ex.logger = get_logger(__name__)
+ex.logger = get_logger("BASELINE")
 
 
 @ex.config
@@ -22,7 +22,6 @@ def cfg():
     # env
     dataset = 'maze'
     max_episode_steps = 500
-    weighted = False
 
     # algorithm
     algo = 'dfs'
@@ -39,16 +38,16 @@ def cfg():
 
 @ex.main
 def evaluate(dataset, max_episode_steps, algo, test_size, n_test_episodes, n_eval_artifacts,
-             seed, data_seed, weighted, _run):
+             seed, data_seed, _run):
     logger = ex.logger
 
     # load data
-    train_set, test_set = get_datasets(dataset, seed=data_seed, test_size=test_size, weighted=weighted)
+    train_set, test_set = get_datasets(dataset, seed=data_seed, test_size=test_size)
     test_loader = get_test_loader(test_set, seed=seed, num_samples=n_test_episodes)
     logger.info(f"Evaluating {algo.upper()} on {dataset} dataset [size={len(test_set)}].")
 
     # environment
-    env = BaseGraphEnv(max_episode_steps=max_episode_steps, weighted=weighted)
+    env = BaseGraphEnv(max_episode_steps=max_episode_steps)
     env.seed(seed)
 
     # policy
@@ -86,7 +85,7 @@ def evaluate(dataset, max_episode_steps, algo, test_size, n_test_episodes, n_eva
 
 
 ex2 = Experiment(name='NOGE_MANY_BASELINES', ingredients=[ex])
-ex2.logger = get_logger(__name__)
+ex2.logger = get_logger("MANY_BASELINES")
 
 
 @ex2.config
@@ -104,6 +103,7 @@ def eval_all(datasets, policies, max_episode_steps, n_eval_artifacts, seeds):
     for dataset in datasets:
         assert dataset in all_datasets, f"Dataset {dataset} is unknown"
 
+
     for policy in policies:
         assert policy in POLICIES, f"Policy {policy} is unknown"
 
@@ -111,8 +111,7 @@ def eval_all(datasets, policies, max_episode_steps, n_eval_artifacts, seeds):
         for algo in policies:
             for i, seed in enumerate(seeds, start=1):
                 ex2.logger.info(f"RUN {i:3}/{len(seeds)} - {algo.upper()} on {dataset}")
-                ex2.run(command_name='evaluate',
-                       config_updates={
+                ex.run(config_updates={
                            'dataset': dataset,
                            'algo': algo,
                            'max_episode_steps': max_episode_steps,

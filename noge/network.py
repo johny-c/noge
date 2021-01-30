@@ -7,15 +7,16 @@ from noge.data_types import DFPTrainingBatch, InferenceSample
 
 
 class NOGENet(nn.Module):
-    def __init__(self, gnn, aggr_net, meas_net, goal_net, context_net, joint_net):
+    def __init__(self, gnn, meas_net, goal_net, joint_net, aggregation='mean', use_goal=True):
         super().__init__()
+        assert aggregation == 'mean'
 
         self.gnn = gnn
-        self.aggr_net = aggr_net
+        self.aggr_net = aggregation
         self.meas_net = meas_net
         self.goal_net = goal_net
-        self.context_net = context_net
         self.joint_net = joint_net
+        self.use_goal = use_goal
 
     def forward(self, batch: Union[DFPTrainingBatch, InferenceSample]):
 
@@ -23,6 +24,24 @@ class NOGENet(nn.Module):
             return self.forward_training_batch(batch)
 
         return self.forward_inference(batch)
+
+    def _aggregate_nodes(self, z, visited_idx):
+        Z_C = z[visited_idx]
+        z_c = torch.mean(Z_C, 0).reshape(1, -1)  # [1, D_z]
+        return z_c
+
+    def _make_context(self, z_m, z_g, z_t, z_c):
+
+        # goal vector g
+        if self.use_goal:
+            lst = [z_m, z_g, z_t, z_c]
+        else:
+            lst = [z_m, z_t, z_c]
+
+        phi = torch.cat(lst, 1)  # [N, 4D]
+        f_v = self.net(phi)
+
+        return f_v
 
     def forward_inference(self, batch: InferenceSample):
         """ Predict for every node in the frontier.
@@ -70,9 +89,9 @@ class NOGENet(nn.Module):
         z_g = self.goal_net(goal)  # [1, D_g]
 
         # aggregate visited nodes
-        z_c = self.aggr_net(z, graph_obs)  # [1, D_z]
+        z_c = self._aggregate_nodes(z, graph_obs.visited_seq)  # [1, D_z]
 
-        z_ctx = self.context_net(z_m, z_g, z_t, z_c)
+        z_ctx = self._make_context(z_m, z_g, z_t, z_c)
 
         # joint prediction
         p = self.joint_net(z_f, z_ctx)  # [A, D_goal]
@@ -104,14 +123,14 @@ class NOGENet(nn.Module):
         actions = batch.actions
 
         # node embeddings
-        node_embeddings_list = [self.gnn(go.x, go.edge_index) for go in graph_obses]
+        Z_list = [self.gnn(go.x, go.edge_index) for go in graph_obses]
 
         # frontier nodes
-        z_f = [z[a].unsqueeze(0) for z, a in zip(node_embeddings_list, actions)]
+        z_f = [z[a].unsqueeze(0) for z, a in zip(Z_list, actions)]
         z_f = torch.cat(z_f)  # [B, D_z]
 
         # current nodes
-        z_t = [z[go.visited_seq[-1]].unsqueeze(0) for z, go in zip(node_embeddings_list, graph_obses)]
+        z_t = [z[go.visited_seq[-1]].unsqueeze(0) for z, go in zip(Z_list, graph_obses)]
         z_t = torch.cat(z_t)  # [B, D_z]
 
         # encode measurements
@@ -121,10 +140,11 @@ class NOGENet(nn.Module):
         z_g = self.goal_net(goals)  # [B, D_g]
 
         # aggregate visited nodes
-        z_c = self.aggr_net(node_embeddings_list, graph_obses)  # [B, D_z]
+        z_c = [self._aggregate_nodes(Z, go.visited_seq) for Z, go in zip(Z_list, graph_obses)]
+        z_c = torch.cat(z_c)  # [B, D_z]
 
         # merge side information
-        z_ctx = self.context_net(z_m, z_g, z_t, z_c)
+        z_ctx = self._make_context(z_m, z_g, z_t, z_c)
 
         # concat context (state) with frontier node embeddings (action)
         p = self.joint_net(z_f, z_ctx)  # [B, D_goal]
@@ -134,7 +154,7 @@ class NOGENet(nn.Module):
 
 class JointNet(nn.Module):
 
-    def __init__(self, dim_in, dim_hidden, dim_out, num_layers, joint_arch, output_activation, alpha, dropout):
+    def __init__(self, dim_in, dim_hidden, dim_out, num_layers, output_activation, alpha, dropout):
         super().__init__()
 
         dims_hidden = [dim_hidden] * (num_layers - 1)
@@ -146,80 +166,16 @@ class JointNet(nn.Module):
         else:
             self.f_out = nn.Identity()
 
-    def forward(self, z_v, z_ctx):
+    def forward(self, z_f, z_ctx):
 
-        num_actions = z_v.shape[0]
+        num_actions = z_f.shape[0]
         if z_ctx.shape[0] < num_actions:  # online [1, D_ctx]
             z_ctx = z_ctx.repeat(num_actions, 1)  # [N, D_ctx]
 
-        phi = torch.cat((z_v, z_ctx), 1)  # [N, D_v + D_ctx]
+        phi = torch.cat((z_f, z_ctx), 1)  # [N, D_v + D_ctx]
         f_v = self.f_out(self.net(phi))
 
         return f_v
-
-
-class ContextNet(nn.Module):
-
-    def __init__(self, dim_node_emb, dim_meas_emb, dim_goal_emb, dim_hidden, dim_out, num_layers,
-                 use_goal=False, use_agg_visited=False, use_current=False, use_context=True, dropout=0, alpha=0):
-        super().__init__()
-
-        num_extra_inputs = int(use_agg_visited) + int(use_current)  # z_t + z_c
-        dim_in = dim_meas_emb + dim_goal_emb * int(use_goal) + dim_node_emb * num_extra_inputs
-        dims_hidden = [dim_hidden] * (num_layers - 1)
-        dims = [dim_in] + dims_hidden + [dim_out]
-
-        if use_context:
-            self.net = MLP(dims=dims, activate_last=True, alpha=alpha, dropout=dropout)
-            self.dim_out = dim_out
-        else:
-            self.net = nn.Identity()
-            self.dim_out = dim_in
-
-        self.use_goal = use_goal
-        self.use_agg_visited = use_agg_visited
-        self.use_current = use_current
-
-    def forward(self, z_m, z_g, z_t, z_c):
-
-        lst = [z_m]
-
-        # goal vector g
-        if self.use_goal:
-            lst.append(z_g)
-
-        # current node v_t
-        if self.use_current:
-            lst.append(z_t)
-
-        # aggregated visited nodes set C
-        if self.use_agg_visited:
-            lst.append(z_c)
-
-        phi = torch.cat(lst, 1)  # [N, 4D]
-        f_v = self.net(phi)
-
-        return f_v
-
-
-class VisitedAggregator(nn.Module):
-
-    def forward(self, z, go):
-
-        if isinstance(z, list):
-            lst = []
-            for zi, goi in zip(z, go):
-                z_ci = zi[goi.visited_seq]
-                aggi = torch.mean(z_ci, 0).reshape(1, -1)  # [1, D]
-                lst.append(aggi)
-
-            agg = torch.cat(lst)
-
-        else:
-            z_c = z[go.visited_seq]  # [N, D]
-            agg = torch.mean(z_c, 0).reshape(1, -1)    # [1, D]
-
-        return agg
 
 
 def make_network(dim_node,
@@ -252,27 +208,24 @@ def make_network(dim_node,
     else:
         goal_net = nn.Identity()
 
-    aggr_net = VisitedAggregator()
-
     dim_node_emb = gnn_channels[-1]  # z_t, z_c
     dim_meas_emb = meas_dims[-1]     # z_m
     dim_goal_emb = goal_dims[-1]     # z_g
 
-    context_net = ContextNet(dim_node_emb,
-                             dim_meas_emb,
-                             dim_goal_emb,
-                             2*dim_hidden,
-                             dim_out=dim_hidden,
-                             num_layers=2,
-                             use_goal=use_goal,
-                             dropout=dropout,
-                             alpha=alpha)
 
-    # Join node embeddings with meas encoding
-    # [3*64, 2*64, 1*6]
-    dim_joint_in = context_net.dim_out + dim_node_emb
-    joint_net = JointNet(dim_joint_in, 2*dim_hidden, dim_goal, num_joint_layers, joint_arch='mlp',
-                         output_activation=output_activation, dropout=dropout, alpha=alpha)
+    # Join measurement encoding, goal encoding, current node embedding, visited aggregate encoding
+    # z_ctx = [z_m || z_g || z_t || z_c ]
+    dim_ctx = dim_meas_emb + dim_goal_emb * int(use_goal) + dim_node_emb * 2
 
-    network = NOGENet(gnn, aggr_net, meas_net, goal_net, context_net, joint_net)
+    # Join frontier node embedding with context
+    dim_joint_in = dim_ctx + dim_node_emb
+    joint_net = JointNet(dim_in=dim_joint_in,
+                         dim_hidden=2*dim_hidden,
+                         dim_out=dim_goal,
+                         num_layers=num_joint_layers,
+                         output_activation=output_activation,
+                         dropout=dropout,
+                         alpha=alpha)
+
+    network = NOGENet(gnn, meas_net, goal_net, joint_net, use_goal=use_goal)
     return network

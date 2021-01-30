@@ -1,4 +1,3 @@
-import time
 import pickle
 import torch
 import pprint
@@ -6,7 +5,7 @@ import logging
 import datetime
 import numpy as np
 
-LOG_FORMAT = '%(asctime)s - %(filename)-20s - %(levelname)-10s - %(message)s'
+LOG_FORMAT = '%(asctime)s - %(filename)-25s - %(levelname)-10s - %(message)s'
 
 
 def get_logger(name=None, fmt=LOG_FORMAT, level=logging.INFO):
@@ -80,25 +79,3 @@ def collapse_dicts(list_of_dicts, reduce_fn=np.mean):
     keys = dict_0.keys()
     out = {k: reduce_fn([d[k] for d in list_of_dicts]) for k in keys}
     return out
-
-
-class Timer:
-    def __init__(self, logger=None):
-        self.logger = logger or get_logger()
-        self.start_time = None
-        self.measurement = None
-
-    def __enter__(self):
-        self.logger.info(f"Timing . . .")
-        self.start_time = time.time()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        end_time = time.time()
-        time_elapsed = end_time - self.start_time
-        self.logger.info(f"Took {time_elapsed:.2f}s")
-        self.measurement = time_elapsed
-        return None
-
-    def get(self):
-        return self.measurement

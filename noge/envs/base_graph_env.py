@@ -150,7 +150,7 @@ class BaseGraphEnv(gym.Env):
             if v in frontier_set:
                 return v
 
-            raise ValueError(f"Nearest Neighbor: Did not found frontier node in the BFS")
+        raise ValueError(f"Nearest Neighbor: Did not found frontier node in the BFS")
 
     def bfs_policy(self):
         return self._frontier[0]
