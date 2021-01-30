@@ -38,10 +38,9 @@ class NOGENet(nn.Module):
         else:
             lst = [z_m, z_t, z_c]
 
-        phi = torch.cat(lst, 1)  # [N, 4D]
-        f_v = self.net(phi)
+        z_ctx = torch.cat(lst, 1)  # [N, 4D]
 
-        return f_v
+        return z_ctx
 
     def forward_inference(self, batch: InferenceSample):
         """ Predict for every node in the frontier.

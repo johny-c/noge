@@ -142,11 +142,13 @@ def main_loop(actor, trainer, evaluator, network, exploration_schedule,
                 log_metrics(t, test_metrics, global_vars, mode='test')
 
                 # epoch performance
-                if save_model and epoch_perf > best_perf:
+                if epoch_perf > best_perf:
                     logger.info(f"{perf_metric} improved: {best_perf:.4f} --> {epoch_perf:.4f}\n")
                     best_perf = epoch_perf
-                    model_path = run_dir / f"model_epoch_{epoch:03}.pth"
-                    log_model(network, model_path, epoch=epoch, er=best_perf, train_step=t)
+
+                    if save_model:
+                        model_path = run_dir / f"model_epoch_{epoch:03}.pth"
+                        log_model(network, model_path, epoch=epoch, er=best_perf, train_step=t)
 
                 # UPDATE MOMENTS
                 logger.info(f"Finished epoch {epoch:3}, perf: {epoch_perf:.4f}  (best performance: {best_perf:.4f})")

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
 
 
 class GCN_Model(nn.Module):
@@ -27,8 +28,11 @@ class GCN_Model(nn.Module):
 
         num_edges = edge_index.size(1)
         edge_weight = self._edge_norm[:num_edges]
-        edge_index, edge_weight = GCNConv.norm(edge_index, x.size(0), edge_weight=edge_weight, dtype=x.dtype,
-                                               improved=self.improved)
+        edge_index, edge_weight = gcn_norm(edge_index=edge_index,
+                                           num_nodes=x.size(0),
+                                           edge_weight=edge_weight,
+                                           dtype=x.dtype,
+                                           improved=self.improved)
 
         x = self.input_layer(x, edge_index, edge_weight)
         for layer in self.hidden_layers:

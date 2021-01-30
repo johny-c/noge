@@ -64,3 +64,23 @@ In the top directory `noge-mwe`:
    ```bash
       mlflow ui
    ```
+
+
+## Baselines
+
+1. To run all non-learning baselines, run
+```bash
+python scripts/evaluate_baselines.py with datasets=$DATASETS
+```
+Make sure you have already generated/fetched the $DATASETS to be used.
+
+For instance, to evaluate `BFS` and `RANDOM` on the `maze` and `grid` datasets, run
+```bash
+python scripts/evaluate_baselines.py with datasets="['maze', 'grid']"  policies="['random','bfs']"
+```
+
+2. To train a `DQN`, run
+```bash
+python scripts/train_dqn.py with dataset=$DATASET reward_type=$REWARD_TYPE
+```
+where $REWARD_TYPE can be `path_length` or `er_diff` (exploration rate difference).

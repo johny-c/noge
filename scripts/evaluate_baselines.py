@@ -119,7 +119,3 @@ def eval_all(datasets, policies, max_episode_steps, n_eval_artifacts, seeds):
                            'seed': seed,
                        })
                 ex2.logger.info("-" * 40)
-
-
-# run with
-# PYTHONPATH+=. python scripts/evaluate_baselines.py with datasets="['MUC','OXF']" policies="['dfs','nn']"
