@@ -18,7 +18,7 @@ def cfg():
     dpi = 300
     output_dir = None
     show = 1
-    place_key = 'SFO'
+    dataset = 'SFO'
     edge_width = 1
     W = 12
     H = 12
@@ -79,9 +79,9 @@ def split_graph(G, name, xmin, xmax, ymin, ymax, W, H, dpi=300, output_dir=None,
 
 
 @ex.automain
-def get_graph(place_key, output_dir, edge_width, dpi, show, W, H, split, alpha):
+def get_graph(dataset, output_dir, edge_width, dpi, show, W, H, split, alpha):
     # get place and name
-    place = PLACES[place_key]
+    place = PLACES[dataset]
     name = get_name_from_place(place)
 
     # load or download raw graph
