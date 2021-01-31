@@ -9,7 +9,7 @@ In the top directory `noge-mwe`:
    
    a) Create a virtual environment (need python 3.8):
    ```bash
-      conda env create -n noge-mwe python==3.8
+      conda env create -n noge-mwe python==3.8 -y
     ```
    b) Activate the virtual environment:
    ```bash
