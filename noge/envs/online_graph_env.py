@@ -205,7 +205,7 @@ class OnlineGraphEnv(BaseGraphEnv):
         E = self._edge_counts[t]
 
         exp_rate = self._exploration_rates[t]  # t / L_t
-        plot = 0 if t == 0 else L / t
+        plot = 0 if t == 0 else L / t  # path length over time
         node_discovery = C / V
         edge_discovery = C / E
         sparsity = (V - 1) / E

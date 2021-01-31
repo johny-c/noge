@@ -38,9 +38,6 @@ goal_space: pos  # pos_neg | pos |  m: mask out K future horizons, u: uniformly 
 batch_size: 32
 lr: 0.0001
 loss: mse
-use_scheduler: False
-scheduler_step_freq: 0.3125
-scheduler_decay: 0.3
 
 # other
 device: cpu

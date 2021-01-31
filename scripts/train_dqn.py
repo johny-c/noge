@@ -26,9 +26,8 @@ ex.observers = [MlflowObserver(tracking_uri=str(EVAL_DIR.absolute()))]
 def train(dataset, test_size, max_episode_steps, reward_type, input_meas_type, meas_transform,
           target_transform, node_history, gamma, target_update_freq,
           cat_features, feature_range, replay_capacity, min_horizon, epsilon_start, epsilon_end,
-          exploration_frac, n_train_steps, train_freq, loss, batch_size, lr, use_scheduler, scheduler_step_freq,
-          scheduler_decay, n_test_episodes, init_eval, n_eval_artifacts, test_freq, log_freq, device, seed, data_seed,
-          save_model, _log, _run, _config):
+          exploration_frac, n_train_steps, train_freq, loss, batch_size, lr, n_test_episodes, init_eval,
+          n_eval_artifacts, test_freq, log_freq, device, seed, data_seed, save_model, _log, _run, _config):
     np.set_printoptions(precision=2, suppress=True)
 
     if device.startswith('cuda'):
@@ -120,18 +119,21 @@ def train(dataset, test_size, max_episode_steps, reward_type, input_meas_type, m
 
     # trainer
     optimizer = torch.optim.Adam(network.parameters(), lr=lr)
-    scheduler = None
-    if use_scheduler:
-        scheduler_step = int(scheduler_step_freq * n_train_steps)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step, gamma=scheduler_decay)
 
     if loss == 'mse':
         criterion = torch.nn.MSELoss()
     else:
         raise ValueError(f"Unsupported loss: {loss}")
 
-    trainer = DQNTrainer(gamma, target_update_freq, replay_buffer, batch_size, network, preprocessor, criterion,
-                         optimizer, scheduler, device)
+    trainer = DQNTrainer(gamma=gamma,
+                         target_update_freq=target_update_freq,
+                         replay_buffer=replay_buffer,
+                         batch_size=batch_size,
+                         network=network,
+                         preprocessor=preprocessor,
+                         criterion=criterion,
+                         optimizer=optimizer,
+                         device=device)
 
     # fill up the replay buffer
     network.eval()

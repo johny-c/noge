@@ -36,10 +36,6 @@ target_update_freq: 100
 batch_size: 32
 lr: 0.0001
 loss: mse  # mse | huber | ordinal
-use_scheduler: False
-scheduler_step_freq: 0.3125
-scheduler_decay: 0.3
-train_after_episode: False
 
 # other
 device: cpu

@@ -27,9 +27,8 @@ ex.observers = [MlflowObserver(tracking_uri=str(EVAL_DIR.absolute()))]
 def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_type, meas_transform,
           target_transform, meas_coeffs, future_steps, temporal_coeffs, sample_goals, goal_space, node_history,
           cat_features, feature_range, replay_capacity, min_horizon, epsilon_start, epsilon_end,
-          exploration_frac, n_train_steps, train_freq, loss, batch_size, lr, use_scheduler, scheduler_step_freq,
-          scheduler_decay, n_test_episodes, init_eval, n_eval_artifacts, test_freq, log_freq, device, seed, data_seed,
-          save_model, _log, _run, _config):
+          exploration_frac, n_train_steps, train_freq, loss, batch_size, lr, n_test_episodes, init_eval,
+          n_eval_artifacts, test_freq, log_freq, device, seed, data_seed, save_model, _log, _run, _config):
 
     np.set_printoptions(precision=2, suppress=True)
 
@@ -141,17 +140,19 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
 
     # trainer
     optimizer = torch.optim.Adam(network.parameters(), lr=lr)
-    scheduler = None
-    if use_scheduler:
-        scheduler_step = int(scheduler_step_freq * n_train_steps)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step, gamma=scheduler_decay)
 
     if loss == 'mse':
         criterion = DFPRegressionLoss()
     else:
         raise ValueError(f"Unsupported loss: {loss}")
 
-    trainer = DFPTrainer(replay_buffer, batch_size, network, preprocessor, criterion, optimizer, scheduler, device)
+    trainer = DFPTrainer(replay_buffer=replay_buffer,
+                         batch_size=batch_size,
+                         network=network,
+                         preprocessor=preprocessor,
+                         criterion=criterion,
+                         optimizer=optimizer,
+                         device=device)
 
     # fill up the replay buffer
     network.eval()
