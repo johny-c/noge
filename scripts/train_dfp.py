@@ -18,7 +18,7 @@ from xlog.utils import get_logger
 from xlog.mlflow_observer import MlflowObserver
 
 ex = Experiment(name='NOGE_DFP', ingredients=[eval_ing, loop_ing])
-ex.add_config(str(CONFIGS_DIR / 'dfp.yaml'))
+ex.add_config(str(CONFIGS_DIR / 'dfp.yaml'))  # configuration is in ./configs/dfp.yaml
 ex.logger = get_logger(__name__, level=logging.INFO)
 ex.observers = [MlflowObserver(tracking_uri=str(EVAL_DIR.absolute()))]
 
@@ -48,12 +48,13 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
     meas_coeffs = np.asarray(meas_coeffs, dtype=np.float32)
     logger.info(f"Output meas coeffs ({output_meas_type}): {meas_coeffs}")
 
+    # make sure measurement coefficients are valid
     if 'L' in output_meas_type:
         assert meas_coeffs[0] < 0, "PLOT should be minimized"
     elif 'R' in output_meas_type:
         assert meas_coeffs[0] > 0, "exploration rate should be maximized"
 
-    # data source
+    # load graph data set
     train_set, test_set = get_datasets(dataset, seed=data_seed, test_size=test_size)
     max_nodes = max(train_set.max_nodes, test_set.max_nodes)
     max_edges = 2 * max(train_set.max_edges, test_set.max_edges)  # for undirected graphs, consider both directions
@@ -61,6 +62,7 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
     test_loader = get_test_loader(test_set, seed=seed, num_samples=n_test_episodes)
     train_gen = get_train_generator(train_set, seed=seed)
 
+    # create preprocessor/postprocessor for inputs and outputs of neural network
     preprocessor = Preprocessor(input_meas_type=input_meas_type,
                                 output_meas_type=output_meas_type,
                                 feature_range=feature_range,
@@ -70,7 +72,7 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
                                 max_nodes=max_nodes,
                                 device=device)
 
-    # environment
+    # environment configuration
     train_env_config = dict(
         max_episode_steps=max_episode_steps,
         temporal_coeffs=temporal_coeffs,
@@ -82,12 +84,13 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
         nn_feat='N' in cat_features,
     )
 
+    # create training and testing environments
     train_env = make_env(**train_env_config, data_generator=train_gen, seed=seed)
     test_env_config = copy.deepcopy(train_env_config)
     test_env_config.update(sample_goals=False, data_generator=None)
     test_env = make_env(**test_env_config, seed=seed)
 
-    # graph memory + graph preprocessing
+    # graph memory configuration
     neg_label, pos_label = feature_range
     mem_features = dict(cat=cat_features)
     graph_mem_config = dict(
@@ -101,10 +104,11 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
         pos_label=pos_label
     )
 
-    eval_memory = make_memory(online=True, **graph_mem_config)
+    # create acting memory (during training) and evaluation memory
     acting_memory = make_memory(online=True, **graph_mem_config)
+    eval_memory = make_memory(online=True, **graph_mem_config)
 
-    # model
+    # neural net configuration
     model_config = dict(
         dim_node=eval_memory.dim_node,
         dim_meas=preprocessor.dim_input_meas,
@@ -113,9 +117,10 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
         **_config['model']
     )
 
+    # create neural net
     network = make_network(**model_config).to(device)
 
-    # evaluation
+    # evaluation policy
     eval_policy = GraphDFPPolicy(network, eval_memory, preprocessor=preprocessor, device=device)
     evaluator = Evaluator(test_loader, test_env, eval_policy)
 
@@ -135,7 +140,7 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
                               future_steps=future_steps,
                               min_horizon=min_horizon)
 
-    # actor: runs the simulation forward and stores to the replay buffer
+    # actor: runs the simulation loop and stores transitions to the replay buffer
     actor = Actor(train_env, acting_policy, replay_buffer)
 
     # trainer
@@ -146,6 +151,7 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
     else:
         raise ValueError(f"Unsupported loss: {loss}")
 
+    # Direct Future Prediction Trainer: samples from replay buffer and updates neural net params
     trainer = DFPTrainer(replay_buffer=replay_buffer,
                          batch_size=batch_size,
                          network=network,
@@ -160,12 +166,14 @@ def train(dataset, test_size, max_episode_steps, input_meas_type, output_meas_ty
     actor.step(n=replay_capacity, use_tqdm=True)
     logger.info(f"Replay buffer filled: [{len(replay_buffer)} / {replay_capacity}]")
 
-    # fit the preprocessor with buffer data
+    # fit the preprocessor with first buffer data
     preprocessor.fit(replay_buffer._measurements)
 
+    # run the main loop
     best_perf = main_loop(actor, trainer, evaluator, network, exploration_schedule,
                           init_eval, n_eval_artifacts, n_train_steps, train_freq, log_freq, test_freq, save_model)
 
+    # clean up
     train_env.close()
     evaluator.close()
 

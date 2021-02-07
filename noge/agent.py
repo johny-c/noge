@@ -106,7 +106,7 @@ def main_loop(actor, trainer, evaluator, network, exploration_schedule,
 
         run_dir = Path(temp_dir)
 
-        # eval once before training
+        # evaluate once before training
         if init_eval:
             eval_results = evaluator.run(network)
             test_metrics = save_eval_results(eval_results, run_dir, epoch=0, n_artifacts=n_eval_artifacts)
@@ -120,11 +120,11 @@ def main_loop(actor, trainer, evaluator, network, exploration_schedule,
 
             # TRAINING STEP
             trainer.step()
-            epsilon = exploration_schedule.step()
+            epsilon = exploration_schedule.step()  # reduce epsilon (epsilon greedy policy)
 
             # COLLECT DATA
             network.eval()
-            actor.step(n=train_freq)
+            actor.step(n=train_freq)  # act in the environment
 
             # REPORT TRAINING METRICS
             if t % log_freq == 0:
