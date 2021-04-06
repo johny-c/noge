@@ -1,7 +1,8 @@
 #!/bin/bash
 
-#conda create -n noge-mwe python=3.8 -y
-#conda activate noge-mwe
+# Follow instructions in README
+#conda create -n noge python=3.8 -y
+#conda activate noge
 
 pip install osmnx==1.0.1
 pip install dataclasses==0.6
