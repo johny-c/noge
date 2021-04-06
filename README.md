@@ -1,19 +1,19 @@
-# noge-mwe
-Anonymized code for "Neural Online Graph Exploration".
+# noge
+Code accompanying "Neural Online Graph Exploration" by Chiotellis & Cremers (2020).
 
 ## Steps to reproduce
 
-In the top directory `noge-mwe`:
+In the top directory `noge`:
 
 **1. Install dependencies in a virtual environment:**
    
    a) Create a virtual environment (need python 3.8):
    ```bash
-      conda env create -n noge-mwe python==3.8 -y
+      conda env create -n noge python==3.8 -y
    ```
    b) Activate the virtual environment:
    ```bash
-      conda activate noge-mwe
+      conda activate noge
    ```
    c) Install dependencies
    ```bash
@@ -84,3 +84,14 @@ For instance, to evaluate `BFS` and `RANDOM` on the `maze` and `grid` datasets, 
    python scripts/train_dqn.py with dataset=$DATASET reward_type=$REWARD_TYPE
 ```
 where $REWARD_TYPE can be `path_length` or `er_diff` (exploration rate difference).
+
+## Citation
+If you use this code in your work, please cite
+```
+@article{chiotellis2020neural,
+  title={Neural Online Graph Exploration},
+  author={Chiotellis, Ioannis and Cremers, Daniel},
+  journal={arXiv preprint arXiv:2012.03345},
+  year={2020}
+}
+```
