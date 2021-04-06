@@ -1,5 +1,5 @@
 # noge
-Code accompanying "Neural Online Graph Exploration" by Chiotellis & Cremers (2020).
+Code accompanying the paper ["Neural Online Graph Exploration" by Chiotellis & Cremers (2020)](https://arxiv.org/abs/2012.03345).
 
 ## Steps to reproduce
 
@@ -86,7 +86,7 @@ For instance, to evaluate `BFS` and `RANDOM` on the `maze` and `grid` datasets, 
 where $REWARD_TYPE can be `path_length` or `er_diff` (exploration rate difference).
 
 ## Citation
-If you use this code in your work, please cite
+If you use this code in your work, please cite using
 ```
 @article{chiotellis2020neural,
   title={Neural Online Graph Exploration},
