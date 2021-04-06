@@ -21,7 +21,7 @@ In the top directory `noge`:
       ./install_dependencies.sh
    ```
 
-**2. Make data**
+**2. Generate/Download data**
    
 Add the top directory to your `$PYTHONPATH`.
 
